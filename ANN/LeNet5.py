@@ -42,9 +42,9 @@ def infer(input_layer, train: bool, regularizer):
         conv1_weights = tf.get_variable(
             'weight',
             [CONV1_SIZE, CONV1_SIZE, NUM_CHANNELS, CONV1_DEEP],
-            initilizer = tf.truncated_normal_initializer(stddev = 0.1)
+            initializer = tf.truncated_normal_initializer(stddev = 0.1)
         )
-        conv1_biases = tf.get_variabls(
+        conv1_biases = tf.get_variable(
             'bias',
             [CONV1_DEEP],
             initializer = tf.constant_initializer(0.0)
@@ -55,7 +55,7 @@ def infer(input_layer, train: bool, regularizer):
             strides = [1, 1, 1, 1],
             padding = 'SAME'
         )
-        relu1 = tf.nn.relu(tf.nn.add_biases(conv1, conv1_biases))
+        relu1 = tf.nn.relu(tf.nn.bias_add(conv1, conv1_biases))
 
     with tf.variable_scope('layer2-pool'):
         pool2 = tf.nn.max_pool(
@@ -98,7 +98,7 @@ def infer(input_layer, train: bool, regularizer):
     # make a column vector
     pool4_shape = pool4.get_shape().as_list()
     pool4_neurons_num = pool4_shape[1] * pool4_shape[2] * pool4_shape[3];
-    pool4_reshaped = tf.resahpe(pool4, [pool4_shape[0], pool4_neurons_num])
+    pool4_reshaped = tf.reshape(pool4, [pool4_shape[0], pool4_neurons_num])
 
     with tf.variable_scope('layer5-fc'):
         fc5_weights = tf.get_variable(
@@ -117,8 +117,11 @@ def infer(input_layer, train: bool, regularizer):
             initializer = tf.constant_initializer(0.1)
         )
 
-        fc5 = tf.mulmat(pool4_reshaped, fc5_weights)
+        fc5 = tf.matmul(pool4_reshaped, fc5_weights)
         relu5 = tf.nn.relu(fc5 + fc5_biases)
+
+        if train:
+            relu5 = tf.nn.dropout(relu5, keep_prob = 0.5)
 
         with tf.variable_scope('layer6-fc'):
             fc6_weights = tf.get_variable(
@@ -133,7 +136,7 @@ def infer(input_layer, train: bool, regularizer):
                 [NUM_LABELS],
                 initializer = tf.constant_initializer(0.1)
             )
-            output = tf.mulmat(relu5, fc6_weights) + fc6_biases
+            output = tf.matmul(relu5, fc6_weights) + fc6_biases
 
         return output
 
@@ -141,14 +144,15 @@ def infer(input_layer, train: bool, regularizer):
 def train(*, mnist, dummy_arg = None):
     x = tf.placeholder(
         tf.float32,
-        [None, INPUT_NODE],
+        [BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS],
         name = 'x-input'
     )
 
     # label input
     y_ = tf.placeholder(
         tf.float32,
-        [None, INPUT_NODE],
+        # [None, NUM_LABELS],
+        [BATCH_SIZE, NUM_LABELS],
         name = 'y-input'
     )
 
@@ -159,11 +163,12 @@ def train(*, mnist, dummy_arg = None):
 
     # ema(rate, nums_of_update)
     variable_averages = tf.train.ExponentialMovingAverage(MOVING_AVERAGE_DECAY, global_step)
-    variable_averages_op = variable_averages.apply(tf.all_variables())
+    variable_averages_op = variable_averages.apply(tf.trainable_variables())
 
     # maximum/maximal in row
     # maximum for single input example
-    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(y, tf.argmax(y_, 1))
+    # sum for this batch
+    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.argmax(y_, 1), logits = y)
 
     # mean for this batch
     # loss function
@@ -191,6 +196,7 @@ def train(*, mnist, dummy_arg = None):
 
         for i in range(TRAINING_STEPS):
             xs, ys = mnist.train.next_batch(BATCH_SIZE)
+            xs = np.reshape(xs, [BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS])
             _, loss_value, step = sess.run([train_op, loss, global_step], feed_dict = {
                 x: xs,
                 y_: ys
@@ -254,10 +260,12 @@ def main_evaluate(argv = None):
 
 def main():
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--validate', required = False,
+    argparser.add_argument('--validate',
+                           required = False,
+                           default = None,
                            help = 'just train it')
     args = argparser.parse_args()
-    if not args.validate:
+    if args.validate is not None:
         main_train()
     else:
         main_evaluate()
