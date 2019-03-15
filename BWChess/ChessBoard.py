@@ -1,3 +1,6 @@
+import random
+
+random.seed()
 class Cell:
 	def __init__(self, state = None):
 		self.state = state;
@@ -88,6 +91,17 @@ class ChessBoard:
 			self.setAndUpdateBlackAt(row, col)
 			self.whiteCount -= 1
 			self.blackCount += 1
+
+	def setAndUpdateRandom(self, player):
+		noneCount = self.n * self.n - self.blackCount - self.whiteCount
+		step = random.randrange(noneCount)
+		for i in range(n):
+			for j in range(n):
+				if self.at(i, j) == None:
+					step -= 1
+					if not step:
+						self.setAndUpdateAt(row, col, player)
+						break
 
 	def clearAt(self, row, col):
 		p = self.at(row, col)
