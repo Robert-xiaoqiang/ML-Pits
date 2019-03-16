@@ -1,1 +1,3 @@
-ANN/ML/
+BWChess/ChessAIWSGI/*
+BWChess/WebVenv/*
+BWChess/db.sqlite3

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title></title>
+        <style>
+            body{
+                font-size: 36px;
+            }
+            *{
+                padding: 0;
+                margin: 0;
+            }
+            .score {
+                text-align: center;
+                line-height: 50px;
+                height: 50px;
+            }
+            .buttons {
+                text-align: center;
+            }
+            button{
+                font-size: 36px;
+                line-height: 50px;
+                margin-right: 30px;
+                padding: 0 30px;
+            }
+            div{
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <canvas id="blackWhite"></canvas>
+        </div>
+        
+        <p class="score">
+            <!--<span>比分</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-->
+            <span id="score">黑:白 = 2:2</span>
+        </p>
+        <p class="buttons">
+            <button id="regret">悔棋</button>
+            <button id="giveUp">认输</button>
+            <button id="negotiate">求和</button>
+        </p>
+    </body>
+    
+    <!--<script src="js/index.js" type="text/javascript" charset="utf-8"></script>-->
+<script type="text/javascript">
+    // 黑白棋  又叫反棋
+class Reversi {
+    constructor (canvasId){
+        this.canvasId = canvasId;
+        this.resetData();
+    }
+    
+    // 重置数据，再来一局
+    resetData (){
+        var body = document.documentElement || document.body;
+        var minWidth = Math.min(body.clientWidth, body.clientHeight);
+        // 属性
+        this.pieces = []; // 棋子数组 二位数组[[],[]]
+        this.recommend = [];
+        this.rowCount = 8; // 行数
+        this.colCount = this.rowCount;// 列数
+        this.cellWidth = minWidth/this.rowCount; //每个格子的宽
+        this.width = this.rowCount * this.cellWidth; // 棋盘的宽
+        this.height = this.width; // 棋盘的高
+        this.R = this.cellWidth * 0.4; // 棋子半径
+        this.HR = this.cellWidth / 4; // 提示格子的半径 hintRadius
+        this.HColor = "#e73480"; // 提示棋子的颜色 
+        this.hisStatus = []; // 历史记录 history status
+        this.noChessCount = 0; // 没棋走次数
+        this.active = "black"; // 当前走棋方
+        this.canvas = document.getElementById(this.canvasId); // canvas DOM
+        this.ctx = this.canvas.getContext("2d"); // canvas环境
+        this.whiteCount = 2; // 白棋数量
+        this.blackCount = 2; // 黑棋数量
+        this.victor = ""; // 胜利方
+        
+        this.init();
+    }
+    
+    // 初始化数据
+    init (){
+        this.initCanvas();
+        this.initPiece();
+        this.renderUi();
+    }
+    
+    // 设置棋盘的宽高
+    initCanvas (){
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+    }
+    
+    // 初始化棋子
+    initPiece (){
+        var initPieces = [];
+        for(let i=0;i<this.rowCount;i++){ // 行
+            initPieces.push([]);
+            for(let j=0;j<this.colCount;j++){ // 列
+                initPieces[i].push({value:0,color:""});
+            }
+        }
+        // 初始的时候中间有四个棋子
+        var center = Math.floor((this.rowCount-1)/2); // 
+        initPieces[center][center].value = 1;
+        initPieces[center][center].color = "black";
+        initPieces[center][center+1].value = 1;
+        initPieces[center][center+1].color = "white";
+        initPieces[center+1][center].value = 1;
+        initPieces[center+1][center].color = "white";
+        initPieces[center+1][center+1].value = 1;
+        initPieces[center+1][center+1].color = "black";
+//        console.log(initPieces);
+        
+        this.pieces = this.deepClone(initPieces);
+        this.hisStatus[0] = this.deepClone(initPieces);
+    }
+    
+    renderUi(){
+        //清除之前的画布
+        this.ctx.clearRect(0,0,this.width,this.height);
+        
+        // 重绘画布
+        this.drawMap();
+        this.drawPieces();
+        this.drawHint();
+    }
+    
+    //画一个棋子或一个提示圆点
+    drawDot(x,y,r,color){
+        this.ctx.beginPath();
+        this.ctx.arc(x,y,r,0,2*Math.PI);
+        this.ctx.closePath();
+        
+        this.ctx.fillStyle = color;
+        this.ctx.fill();
+    }
+    
+    // 画棋盘
+    drawMap(){
+        // 背景
+        this.ctx.beginPath();
+        this.ctx.rect(0,0,this.width,this.height);
+        this.ctx.closePath();
+        this.ctx.fillStyle = "#ffa5e8";
+        this.ctx.fill();
+        
+        // 画横线
+        this.ctx.beginPath();
+        for(let i=0;i<this.rowCount;i++){
+            this.ctx.moveTo(0,this.cellWidth*i);
+            this.ctx.lineTo(this.cellWidth*this.rowCount,this.cellWidth*i);
+        }
+        this.ctx.stroke();
+        
+        // 画纵线
+        this.ctx.beginPath();
+        for(let i=0;i<this.colCount;i++){
+            this.ctx.moveTo(this.cellWidth*i,0);
+            this.ctx.lineTo(this.cellWidth*i,this.cellWidth*this.colCount);
+        }
+        this.ctx.stroke();
+    }
+    
+    // 画所有的棋子
+    drawPieces(){
+        for(let i=0;i<this.pieces.length;i++){
+            for(let j=0;j<this.pieces[i].length;j++){
+                if(this.pieces[i][j].value){
+                    var x = i * this.cellWidth + this.cellWidth/2;
+                    var y = j * this.cellWidth + this.cellWidth/2;
+                    this.drawDot(x,y,this.R,this.pieces[i][j].color);
+                }
+            }
+        }
+    }
+    
+    // 画所有的提示
+    drawHint(){
+        for(let i=0;i<this.recommend.length;i++){
+            var x = this.recommend[i].x * this.cellWidth + this.cellWidth/2;
+            var y = this.recommend[i].y * this.cellWidth + this.cellWidth/2;
+            this.drawDot(x,y,this.HR, this.HColor);
+        }
+    }
+    // 深拷贝
+    deepClone (values) {
+      var copy;
+    
+      // Handle the 3 simple types, and null or undefined
+      if (null == values || "object" != typeof values) return values;
+    
+      // Handle Date
+      if (values instanceof Date) {
+        copy = new Date();
+        copy.setTime(values.getTime());
+        return copy;
+      }
+    
+      // Handle Array
+      if (values instanceof Array) {
+        copy = [];
+        for (var i = 0, len = values.length; i < len; i++) {
+          copy[i] = this.deepClone(values[i]);
+        }
+        return copy;
+      }
+    
+      // Handle Object
+      if (values instanceof Object) {
+        copy = {};
+        for (var attr in values) {
+          if (values.hasOwnProperty(attr)) copy[attr] = this.deepClone(values[attr]);
+        }
+        return copy;
+      }
+    
+      throw new Error("Unable to copy values! Its type isn't supported.");
+    }
+}
+</script>
+<script type="text/javascript">
+    var score = document.getElementById("score");
+    var regret = document.getElementById("regret");
+    var giveUp = document.getElementById("giveUp");
+    var negotiate = document.getElementById("negotiate");
+    var offset;
+    var reversi = new Reversi("blackWhite");
+    reversi.canvas.addEventListener("click",function(e){
+        offset = reversi.canvas.getBoundingClientRect();
+        var x = Math.floor((e.clientX - offset.left) / reversi.cellWidth);
+        var y = Math.floor((e.clientY - offset.top) / reversi.cellWidth);
+        console.log(x,y,"点击位置");
+        // 走棋
+        // reversi.goStep(x,y);
+        
+    },false);
+    
+</script>
+</html>
