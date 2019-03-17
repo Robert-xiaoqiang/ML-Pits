@@ -1,4 +1,6 @@
 import random
+import copy
+import json
 
 random.seed()
 class Cell:
@@ -7,7 +9,8 @@ class Cell:
 
 	def copy(self) -> 'Cell':
 		return Cell(self.state)
-
+	def __str__(self):
+		return self.state if self.state != None else 'None'
 	def isBlack(self) -> bool:
 		return self.state == 'black'
 
@@ -23,6 +26,16 @@ class Cell:
 	def clear(self):
 		self.state = None
 
+class CellEncoder(json.JSONEncoder):
+	def dafault(self, obj):
+		print(type(obj))
+		if isinstance(obj, Cell):
+			d = {
+				'state': obj.state
+			}
+			return json.dumps(d)
+		else:
+			return super().default(obj)
 # n * n Cells (0, 0) left-top
 # initialize to None state
 # just nested list
@@ -41,19 +54,31 @@ class ChessBoard:
 		self.blackCount = 0
 		self.whiteCount = 0
 
-	def __init__(self, clone: 'ChessBoard'):
-		self.n = int(clone.n)
-		self.data = [[clone.at(i, j).copy() for i in range(n)] for j in range(n)]
-		self.minRow = int(clone.minRow)
-		self.maxRow = int(clone.maxRow)
-		self.minCol = int(clone.minCol)
-		self.maxCol = int(clone.maxCol)
+	# def __init__(self, clone: 'ChessBoard'):
+	# 	self.n = int(clone.n)
+	# 	self.data = [[clone.at(i, j).copy() for i in range(n)] for j in range(n)]
+	# 	self.minRow = int(clone.minRow)
+	# 	self.maxRow = int(clone.maxRow)
+	# 	self.minCol = int(clone.minCol)
+	# 	self.maxCol = int(clone.maxCol)
 
-		self.blackCount = int(clone.blackCount)
-		self.whiteCount = int(clone.whiteCount)
+	# 	self.blackCount = int(clone.blackCount)
+	# 	self.whiteCount = int(clone.whiteCount)
 
 	def copy(self) -> 'ChessBoard':
-		return ChessBoard(self)
+		ret = ChessBoard(self.n)
+		ret.n = int(self.n)
+		ret.data = [[self.at(i, j).copy() for i in range(n)] for j in range(n)]
+		ret.minRow = int(self.minRow)
+		ret.maxRow = int(self.maxRow)
+		ret.minCol = int(self.minCol)
+		ret.maxCol = int(self.maxCol)
+
+		ret.blackCount = int(self.blackCount)
+		ret.whiteCount = int(self.whiteCount)
+
+		return ret
+
 
 	def checkMinMaxCoords(self, row, col):
 		if row < self.minRow: self.minRow = row
@@ -79,6 +104,8 @@ class ChessBoard:
 			self.setAndUpdateBlackAt(row, col)
 		elif player == 'white':
 			self.setAndUpdateWhiteAt(row, col)
+		else:
+			print(player)
 
 	def setAndUpdateOppositeAt(self, row, col):
 		positive = self.at(row, col)
@@ -86,11 +113,9 @@ class ChessBoard:
 		if positive == 'black':
 			self.setAndUpdateWhiteAt(row, col)
 			self.blackCount -= 1
-			self.whiteCount += 1
 		else:
 			self.setAndUpdateBlackAt(row, col)
 			self.whiteCount -= 1
-			self.blackCount += 1
 
 	def setAndUpdateRandom(self, player):
 		noneCount = self.n * self.n - self.blackCount - self.whiteCount
@@ -114,30 +139,13 @@ class ChessBoard:
 
 	def at(self, row, col):
 		return self.data[row][col]
-    
-    # B eat W
-    # W eat B
-	def updateFrom(self, row, col):
-		# bottom
-		updateFromWithStep(row, col, 1, 0)
-		# top
-		updateFromWithStep(row, col, -1, 0)
-		# right
-		updateFromWithStep(row, col, 0, 1)
-		# left
-		updateFromWithStep(row, col, 0, -1)
-		# right-bottom
-		updateFromWithStep(row, col, 1, 1)
-		# left-bottom
-		updateFromWithStep(row, col, 1, -1)
-		# left-top
-		updateFromWithStep(row, col, -1, -1)
-		# right-top
-		updateFromWithStep(row, col, -1, 1)
+
 	def updateFromWithStep(self, row, col, rowStep, colStep):
 		positive = self.at(row, col)
 		assert positive != None
 		opponent = []
+		row += rowStep
+		col += colStep
 		while self.minRow <= row < self.maxRow and self.minCol <= col < self.maxCol:
 			if self.at(row, col) == None:
 				break
@@ -150,6 +158,26 @@ class ChessBoard:
 			row += rowStep
 			col += colStep
 		return
+    
+    # B eat W
+    # W eat B
+	def updateFrom(self, row, col):
+		# bottom
+		self.updateFromWithStep(row, col, 1, 0)
+		# top
+		self.updateFromWithStep(row, col, -1, 0)
+		# right
+		self.updateFromWithStep(row, col, 0, 1)
+		# left
+		self.updateFromWithStep(row, col, 0, -1)
+		# right-bottom
+		self.updateFromWithStep(row, col, 1, 1)
+		# left-bottom
+		self.updateFromWithStep(row, col, 1, -1)
+		# left-top
+		self.updateFromWithStep(row, col, -1, -1)
+		# right-top
+		self.updateFromWithStep(row, col, -1, 1)
 
 	# None not terminal
 	# black
@@ -176,7 +204,27 @@ class ChessBoard:
 		for i in range(n):
 			for j in range(n):
 				if self.get(i, j) == None:
-					temp = ChessBoard(self)
+					temp = self.copy()
 					temp.setAndUpdateAt(i, j, player)
 					ret.append(temp)
 		return ret
+
+class ChessBoardEncoder(json.JSONEncoder):
+	def default(self, obj):
+		if isinstance(obj, ChessBoard):
+			d = {
+				'data': [[json.dumps(obj.data[i][j].__dict__) \
+				 for j in range(obj.n)]
+				 for i in range(obj.n)],
+				'n': obj.n,
+				'minRow': obj.minRow,
+				'maxRow': obj.maxRow,
+				'minCol': obj.minCol,
+				'maxCol': obj.maxCol,
+
+				'blackCount': obj.blackCount,
+				'whiteCount': obj.whiteCount
+			}
+			return json.dumps(d)
+		else:
+			return super().default(obj)

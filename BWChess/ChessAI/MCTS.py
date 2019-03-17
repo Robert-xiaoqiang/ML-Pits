@@ -26,7 +26,7 @@ class MCState:
 		self.scores = float(copy.scores)
 		self.uct = float(coyp.uct)
 
-	@classmthod
+	@classmethod
 	def playerReverse(player):
 		if player == 'black':
 			return 'white'
