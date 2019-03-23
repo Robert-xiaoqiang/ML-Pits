@@ -26,3 +26,4 @@ def index(request):
 		}
 		print(chessboard.blackCount, chessboard.whiteCount)
 		return render(request, 'ChessAI/index.html', context)
+
