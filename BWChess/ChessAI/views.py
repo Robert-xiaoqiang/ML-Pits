@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from django.http import HttpResponse
 from django.shortcuts import render
 
@@ -22,7 +21,8 @@ def index(request):
 		row, col, player = request.POST.get('row'), request.POST.get('col'), request.POST.get('player')
 		chessboard.setAndUpdateAt(int(row), int(col), player)
 		context = {
-			'chessboard': json.dumps(chessboard, cls = ChessBoardEncoder)
+			#'chessboard': json.dumps(chessboard, cls = ChessBoardEncoder)
+			'chessboard': chessboard
 		}
 		print(chessboard.blackCount, chessboard.whiteCount)
 		return render(request, 'ChessAI/index.html', context)

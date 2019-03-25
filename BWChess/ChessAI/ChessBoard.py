@@ -9,8 +9,10 @@ class Cell:
 
 	def copy(self) -> 'Cell':
 		return Cell(self.state)
+
 	def __str__(self):
 		return self.state if self.state != None else 'None'
+
 	def isBlack(self) -> bool:
 		return self.state == 'black'
 
