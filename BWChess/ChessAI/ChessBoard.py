@@ -47,10 +47,10 @@ class ChessBoard:
 		# basic information
 		self.data = [[Cell() for i in range(n)] for i in range(n)]
 		self.n = n
-		self.minRow = 0      # inclusive
-		self.maxRow = self.n # exclusive
+		self.minRow = 0 # inclusive
+		self.maxRow = 0 # exclusive
 		self.minCol = 0
-		self.maxCol = self.n
+		self.maxCol = 0
 		
 		# game information
 		self.blackCount = 0
@@ -70,7 +70,7 @@ class ChessBoard:
 	def copy(self) -> 'ChessBoard':
 		ret = ChessBoard(self.n)
 		ret.n = int(self.n)
-		ret.data = [[self.at(i, j).copy() for i in range(n)] for j in range(n)]
+		ret.data = [[self.at(i, j).copy() for j in range(self.n)] for i in range(self.n)]
 		ret.minRow = int(self.minRow)
 		ret.maxRow = int(self.maxRow)
 		ret.minCol = int(self.minCol)
@@ -81,6 +81,11 @@ class ChessBoard:
 
 		return ret
 
+	@classmethod
+	def constructorFromDict(cls, d):
+		ret = ChessBoard(d['n'])
+		ret.__dict__ = d
+		return ret
 
 	def checkMinMaxCoords(self, row, col):
 		if row < self.minRow: self.minRow = row
@@ -89,16 +94,22 @@ class ChessBoard:
 		if col < self.minCol: self.minCol = col
 		elif col > self.maxCol: self.maxCol = col + 1
 
-	def setAndUpdateBlackAt(self, row: int, col: int):
+	def setWithoutUpdateBlackAt(self, row: int, col: int):
 		self.at(row, col).setBlack()
 		self.checkMinMaxCoords(row, col)
 		self.blackCount += 1
+
+	def setAndUpdateBlackAt(self, row: int, col: int):
+		self.setWithoutUpdateBlackAt(row, col)
 		self.updateFrom(row, col)
 
-	def setAndUpdateWhiteAt(self, row: int, col: int):
+	def setWithoutUpdateWhiteAt(self, row: int, col: int):
 		self.at(row, col).setWhite()
 		self.checkMinMaxCoords(row, col)
 		self.whiteCount += 1
+
+	def setAndUpdateWhiteAt(self, row: int, col: int):
+		self.setWithoutUpdateWhiteAt(row, col)
 		self.updateFrom(row, col)
 
 	def setAndUpdateAt(self, row, col, player):
@@ -110,7 +121,7 @@ class ChessBoard:
 			print(player)
 
 	def setAndUpdateOppositeAt(self, row, col):
-		positive = self.at(row, col)
+		positive = self.at(row, col).state
 		assert positive != None
 		if positive == 'black':
 			self.setAndUpdateWhiteAt(row, col)
@@ -119,19 +130,36 @@ class ChessBoard:
 			self.setAndUpdateBlackAt(row, col)
 			self.whiteCount -= 1
 
+	def setWithoutUpdateOppositeAt(self, row, col):
+		positive = self.at(row, col).state
+		assert positive != None
+		if positive == 'black':
+			self.setWithoutUpdateWhiteAt(row, col)
+			self.blackCount -= 1
+		else:
+			self.setWithoutUpdateBlackAt(row, col)
+			self.whiteCount -= 1
+
 	def setAndUpdateRandom(self, player):
 		noneCount = self.n * self.n - self.blackCount - self.whiteCount
-		step = random.randrange(noneCount)
-		for i in range(n):
-			for j in range(n):
-				if self.at(i, j) == None:
-					step -= 1
+		try:
+			step = random.randrange(noneCount)
+		except Exception as e:
+			print(noneCount, self.n, self.blackCount, self.whiteCount)
+		over = False
+		for i in range(self.n):
+			for j in range(self.n):
+				if self.at(i, j).state == None:
 					if not step:
-						self.setAndUpdateAt(row, col, player)
+						self.setAndUpdateAt(i, j, player)
+						over = True
 						break
+					step -= 1
+			if over:
+				break
 
 	def clearAt(self, row, col):
-		p = self.at(row, col)
+		p = self.at(row, col).state
 		if p == 'black':
 			self.blackCount -= 1
 		elif p == 'white':
@@ -143,19 +171,20 @@ class ChessBoard:
 		return self.data[row][col]
 
 	def updateFromWithStep(self, row, col, rowStep, colStep):
-		positive = self.at(row, col)
+		positive = self.at(row, col).state
 		assert positive != None
 		opponent = []
 		row += rowStep
 		col += colStep
 		while self.minRow <= row < self.maxRow and self.minCol <= col < self.maxCol:
-			if self.at(row, col) == None:
+			if self.at(row, col).state == None:
 				break
-			elif self.at(row, col) != positive:
+			elif self.at(row, col).state != positive:
 				opponent.append((row, col))
 			else:
 				for r, c in opponent:
-					self.setAndUpdateOppositeAt(r, c)
+					# self.setAndUpdateOppositeAt(r, c)
+					self.setWithoutUpdateOppositeAt(r, c)
 				break;
 			row += rowStep
 			col += colStep
@@ -185,31 +214,50 @@ class ChessBoard:
 	# black
 	# white
 	# blank
-	def isTerminal():
-		flag1 = self.whiteCount + self.blackCount == n * n
+	def isTerminal(self):
+		flag1 = self.whiteCount + self.blackCount == self.n * self.n
 		if self.blackCount > self.whiteCount and \
-		   (self.whiteCount == 0 or flag1):
+		   (flag1):
 			return 'black'
 		elif self.whiteCount > self.blackCount and \
-		   (self.blackCount == 0 or flag1):
+		   (flag1):
 			return 'white'
 		elif self.whiteCount == self.blackCount and flag1:
 			return 'blank'
 		else:
 			return None
-
-	def gatAllNextStep(self, player):
+	'''
+	@param player: player for this step
+	'''
+	def getAllNextStep(self, player):
 		assert player != None
 		ret = []
 		if self.isTerminal() != None:
 			return ret
-		for i in range(n):
-			for j in range(n):
-				if self.get(i, j) == None:
+		imin, imax = self.minRow - 1 if self.minRow > 0 else self.minRow, \
+					 self.maxRow + 1 if self.maxRow < self.n else self.maxRow
+		jmin, jmax = self.minCol - 1 if self.minCol > 0 else self.minCol, \
+					 self.maxCol + 1 if self.maxCol < self.n else self.maxCol
+		for i in range(imin, imax):
+			for j in range(jmin, jmax):
+				if self.at(i, j).state == None:
 					temp = self.copy()
 					temp.setAndUpdateAt(i, j, player)
 					ret.append(temp)
 		return ret
+
+def ChessBoardObjectHook(dct):
+	if 'data' in dct and 'n' in dct and 'minRow' in dct:
+		ret = ChessBoard(dct['n'])
+		for i in range(dct['n']):
+			for j in range(dct['n']):
+				ret.data[i][j] = Cell(dct['data'][i][j])
+		del dct['data']
+		del dct['n']
+		ret.__dict__.update(dct)
+		return ret
+	else:
+		return dct
 
 class ChessBoardEncoder(json.JSONEncoder):
 	def default(self, obj):

@@ -9,47 +9,52 @@
         <div>
             <canvas id="blackWhite"></canvas>
         </div>
-        <script src="/static/js/jquery-3.3.1.min.js" type="text/javascript" charset="utf-8"></script>
-        <script type="text/javascript" src="/static/js/index.js" />
-        <script type="text/javascript">
-            $.ajaxSetup({
-                data: {csrfmiddlewaretoken: '{{ csrf_token }}' }
-            });
-
-            var offset;
-            var reversi = new Reversi("blackWhite");
-
-            reversi.drawChesses();
-            reversi.canvas.addEventListener("click", e => {
-                offset = reversi.canvas.getBoundingClientRect();
-                var x = Math.floor((e.clientX - offset.left) / reversi.cellWidth);
-                var y = Math.floor((e.clientY - offset.top) / reversi.cellWidth);
-                console.log(x, y, "click position");
-
-                var url = "some url";
-
-                $.ajax({
-                    type: "POST",
-                    url: "{% url 'index' %}",
-                    async: true,
-                    data: {
-                        row: y,
-                        col: x,
-                        player: reversi.positive
-                    },
-                    success: function(response) {
-                        alert("ok");
-                    }
-                });
-
-                if(reversi.positive === 'black') {
-                    reversi.positive = 'white';
-                } else {
-                    reversi.positive = 'black';
-                }
-                reversi.drawChesses();
-            }, false);
-
-        </script>
     </body>
+<script type="text/javascript" src="/static/js/jquery-3.3.1.min.js" charset="utf-8"></script>
+<script type="text/javascript" src="/static/js/index.js"></script>
+<script type="text/javascript">
+    $.ajaxSetup({
+        data: {csrfmiddlewaretoken: '{{ csrf_token }}' }
+    });
+    // is this global?
+    var reversi = new Reversi('blackWhite');    
+    
+    function render(chessboardJSON) {
+        reversi.drawChesses(JSON.parse(chessboardJSON));
+    }
+    const chessboard = '{{ chessboard|safe }}';
+    render(chessboard.substring(1, chessboard.length - 1));
+    reversi.canvas.addEventListener('click', e => {
+        let offset = reversi.canvas.getBoundingClientRect();
+        let x = Math.floor((e.clientX - offset.left) / reversi.cellWidth);
+        let y = Math.floor((e.clientY - offset.top) / reversi.cellWidth);
+
+        console.log(x, y, 'click position(X, Y)');
+        // row, col
+        reversi.drawDot(y, x, reversi.R, reversi.positive);
+        $.ajax({
+            type: 'POST',
+            url: "{% url 'index' %}",
+            async: true,
+            data: {
+                row: y,
+                col: x,
+                player: reversi.positive
+            },
+            success: function f(response) {
+                window.setTimeout(function() {
+                    render(response);
+                }, 200);
+            }
+        });
+        /*
+        if(reversi.positive === 'black') {
+            reversi.positive = 'white';
+        } else {
+            reversi.positive = 'black';
+        }
+        */
+    }, false);
+
+</script>
 </html>

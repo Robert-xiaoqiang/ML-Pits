@@ -53,11 +53,13 @@
         }
 
         /**
-         * x width
-         * y height
+         * i row -> y height size
+         * j col -> x width size
          * coordinate in window/screen
          */
-        drawDot(x, y, r, color) {
+        drawDot(i, j, r, color) {
+            let x = j * this.cellWidth + this.cellWidth / 2;
+            let y = i * this.cellWidth + this.cellWidth / 2;
             this.ctx.beginPath();
             this.ctx.arc(x, y, r, 0, 2*Math.PI);
             this.ctx.closePath();
@@ -93,21 +95,17 @@
         }
 
         // 画所有的棋子
+        // Python nested list -> JavaScript 2-deminsion array
         drawChesses(chessboardJSON) {
             this.chesses = chessboardJSON.data;
             for(let i = 0; i<this.chesses.length; i++){
                 for(let j = 0; j<this.chesses[i].length; j++){
                     const a = this.chesses[i][j];
                     this.chesses[i][j] = JSON.parse(a);
-                    // width x-coordinate
-                    // height y-coordinate
-                    var x = j * this.cellWidth + this.cellWidth / 2;
-
-                    var y = i * this.cellWidth + this.cellWidth / 2;
                     if(this.chesses[i][j].state === 'black'){
-                        this.drawDot(x, y, this.R, 'black');
+                        this.drawDot(i, j, this.R, 'black');
                     } else if(this.chesses[i][j].state === 'white') {
-                        this.drawDot(x, y, this.R, 'white');
+                        this.drawDot(i, j, this.R, 'white');
                     }
                 }
             }

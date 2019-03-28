@@ -1,7 +1,8 @@
 import math
 import random
 import time
-from .ChessBoard import ChessBoard
+import json
+from .ChessBoard import ChessBoard, ChessBoardEncoder
 # chessboard
 # player play this step now
 # black or white
@@ -17,17 +18,18 @@ class MCState:
 		self.player = player
 		self.visits = 0
 		self.scores = 0.0
-		self.uct = None
+		self.uct = 0.0
 
-	def __init__(self, copy):
-		self.chessboard = ChessBoard(copy.chessboard)
-		self.player = str(copy.player)
-		self.visits = int(copy.visits)
-		self.scores = float(copy.scores)
-		self.uct = float(coyp.uct)
-
+	def copy(self) -> 'MCState':
+		ret = MCState(None, None)
+		ret.chessboard = self.chessboard.copy()
+		ret.player = str(self.player)
+		ret.visits = int(self.visits)
+		ret.scores = float(self.scores)
+		ret.uct = float(self.uct)
+		return ret
 	@classmethod
-	def playerReverse(player):
+	def playerReverse(cls, player):
 		if player == 'black':
 			return 'white'
 		elif player == 'white':
@@ -43,15 +45,17 @@ class MCTNode:
 	#
 	# parent is not copied
 	#
-	def __init__(self, copy):
-		assert len(copy.children) == 0
-		self.state = MCState(copy.state)
-		self.parent = copy.parent
-		self.children = children.copy()
-		self.evaluatedChildren = evaluatedChildren.copy()
+	def copy(self) -> 'MCTNode':
+		assert len(self.children) == 0
+		ret = MCTNode(None, None)
+		ret.state = self.state.copy()
+		ret.parent = self.parent
+		ret.children = self.children.copy()
+		ret.evaluatedChildren = self.evaluatedChildren.copy()
+		return ret
 
 	def isExtended(self):
-		return len(self.evaluatedChildren) == len(self.children)
+		return len(self.children) and len(self.evaluatedChildren) == len(self.children)
 
 	def addChild(self, mctnode: 'MCTNode'):
 		self.children.append(mctnode)
@@ -60,9 +64,9 @@ class MCTNode:
 		return self.children
 
 	def getUCT(self) -> float:
-		assert self.parent != None and self.visits > 0
-		t = self.parent.visits
-		return scores / visites + MCTSConstant * math.sqrt(math.log(t / self.visits))
+		assert self.parent != None and self.state.visits > 0
+		t = self.parent.state.visits
+		return self.state.scores / self.state.visits + MCTSConstant * math.sqrt(math.log(t / self.state.visits))
 
 	def updateState(self, visitStep, scoreStep):
 		self.state.visits += visitStep
@@ -74,22 +78,26 @@ class MCTS:
 		state = MCState(chessboard, player)
 		self.root = MCTNode(state, None)
 	def search(self):
-		if self.chessboard.isTerminal() != None:
+		if self.root.state.chessboard.isTerminal() != None:
 			return
 		cur = self.root
+		cur.state.visits += 1
 		while cur.isExtended():
 			# multiple maximums ?
 			cur = max(cur.children, key = lambda x: x.state.uct)
+			cur.state.visits += 1
 
 		# cur is not extended fully
 		# simlateBegin is not evaluated
 		simulateBegin = self.extend(cur)
 		assert simulateBegin != None
-		score = self.simulate(MCTNode(simulateBegin))
+		score = self.simulate(simulateBegin.copy())
 
+		simulateBegin.state.visits += 1
 		inode = simulateBegin
-		while inode != None:
-			inode.updateState(1, score)
+		# UCT of root is meaningless
+		while inode.parent != None:
+			inode.updateState(0, score)
 			inode = inode.parent
 
 	def extend(self, cur: MCTNode) -> MCTNode:
@@ -97,19 +105,21 @@ class MCTS:
 		if not len(cur.children):
 			curChessboard = cur.state.chessboard
 
+			nextPlayer = MCState.playerReverse(cur.state.player)
 			# list of chessboard
-			nextSteps = curChessboard.getAllNextStep()
+			nextSteps = curChessboard.getAllNextStep(nextPlayer)
 			for np in nextSteps:
-				state = MCState(np, MCState.playerReverse(cur.state.player))
+				state = MCState(np, nextPlayer)
 				tnode = MCTNode(state, cur)
 				cur.addChild(tnode)
 
 		# choose unvisted, visit/evaluate it
 		simulateBegin = None
-		for c in len(cur.children):
-			if (c,) not in cur.evaluatedChildren:
-				cur.evaluatedChildren.add((c,))
-				simulateBegin = c
+		for ci in range(len(cur.children)):
+			if ci not in cur.evaluatedChildren:
+				cur.evaluatedChildren.add(ci)
+				simulateBegin = cur.children[ci]
+				break
 
 		return simulateBegin
 
@@ -123,16 +133,18 @@ class MCTS:
 		me = player
 		chessboard = simulateBegin.state.chessboard
 		while chessboard.isTerminal() == None:
+			player = MCState.playerReverse(player)
 			chessboard.setAndUpdateRandom(player)
 			if chessboard.isTerminal() != None:
 				break
-			player = MCTNode.playerReverse(player)
+			player = MCState.playerReverse(player)
 			chessboard.setAndUpdateRandom(player)
 		return int(chessboard.isTerminal() == me)
+
 	def generate(self):
 		c1 = time.time()
 		c2 = time.time()
-		while int(c2 - c1) <= 10000:
+		while int(c2 - c1) <= 5:
 			self.search()
 			c2 = time.time()
-		return max(self.root.children(), lambda x: x.state.visits).state.chessboard
+		return max(self.root.children, key = lambda x: x.state.visits).state.chessboard
