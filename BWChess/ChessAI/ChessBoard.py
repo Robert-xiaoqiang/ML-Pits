@@ -1,5 +1,4 @@
 import random
-import copy
 import json
 
 random.seed()
@@ -82,17 +81,34 @@ class ChessBoard:
 		return ret
 
 	@classmethod
-	def constructorFromDict(cls, d):
-		ret = ChessBoard(d['n'])
-		ret.__dict__ = d
+	def contructorFromJSONStr(cls, chessboardJSONStr) -> 'ChessBoard':
+		chessboardDict = json.loads(chessboardJSONStr)
+		ret = cls(chessboardDict['n'])
+		for i in range(ret.n):
+			for j in range(ret.n):
+				ret.data[i][j].state = chessboardDict['data'][i][j]['state']
+		ret.minRow = int(chessboardDict['minRow'])
+		ret.maxRow = int(chessboardDict['maxRow'])
+		ret.minCol = int(chessboardDict['minCol'])
+		ret.maxCol = int(chessboardDict['maxCol'])
+
+		ret.blackCount = int(chessboardDict['blackCount'])
+		ret.whiteCount = int(chessboardDict['whiteCount'])
+
 		return ret
 
 	def checkMinMaxCoords(self, row, col):
-		if row < self.minRow: self.minRow = row
-		elif row > self.maxRow: self.maxRow = row + 1
+		if self.minRow == self.maxRow and self.minCol == self.maxCol:
+			self.minRow = row
+			self.maxRow = row + 1
+			self.minCol = col
+			self.maxCol = col + 1
+		else:
+			if row < self.minRow: self.minRow = row
+			elif row >= self.maxRow: self.maxRow = row + 1
 
-		if col < self.minCol: self.minCol = col
-		elif col > self.maxCol: self.maxCol = col + 1
+			if col < self.minCol: self.minCol = col
+			elif col >= self.maxCol: self.maxCol = col + 1
 
 	def setWithoutUpdateBlackAt(self, row: int, col: int):
 		self.at(row, col).setBlack()
@@ -182,15 +198,16 @@ class ChessBoard:
 			elif self.at(row, col).state != positive:
 				opponent.append((row, col))
 			else:
+				# print(opponent)
 				for r, c in opponent:
 					# self.setAndUpdateOppositeAt(r, c)
 					self.setWithoutUpdateOppositeAt(r, c)
-				break;
+				break
 			row += rowStep
 			col += colStep
 		return
     
-    # B eat W
+	# B eat W
     # W eat B
 	def updateFrom(self, row, col):
 		# bottom
@@ -226,11 +243,22 @@ class ChessBoard:
 			return 'blank'
 		else:
 			return None
+
+	def isGood(self):
+		if self.blackCount > 2 * self.whiteCount and self.whiteCount >= 5 or \
+		   self.blackCount > self.whiteCount + 15 and self.whiteCount >= 10:
+			return 'black'
+		elif self.whiteCount > 2 * self.blackCount and self.blackCount >= 5 or \
+			 self.whiteCount > self.blackCount + 15 and self.blackCount >= 10:
+			return 'white'
+		else:
+			return None
 	'''
 	@param player: player for this step
 	'''
 	def getAllNextStep(self, player):
 		assert player != None
+		# list of tuple(chessboard, (position))
 		ret = []
 		if self.isTerminal() != None:
 			return ret
@@ -243,7 +271,7 @@ class ChessBoard:
 				if self.at(i, j).state == None:
 					temp = self.copy()
 					temp.setAndUpdateAt(i, j, player)
-					ret.append(temp)
+					ret.append((temp, (i, j)))
 		return ret
 
 def ChessBoardObjectHook(dct):

@@ -16,14 +16,40 @@
     $.ajaxSetup({
         data: {csrfmiddlewaretoken: '{{ csrf_token }}' }
     });
+
     // is this global?
     var reversi = new Reversi('blackWhite');    
     
     function render(chessboardJSON) {
-        reversi.drawChesses(JSON.parse(chessboardJSON));
+        reversi.drawChesses(chessboardJSON);
     }
-    const chessboard = '{{ chessboard|safe }}';
-    render(chessboard.substring(1, chessboard.length - 1));
+
+    function playerReverse(player) {
+        if(player === 'black') {
+            return 'white';
+        } else if(player === 'white') {
+            return 'black';
+        } else {
+            return null;
+        }
+    }
+
+    // for GET method
+    var chess = '{{ chessboard|safe }}';
+    var tempJSON = JSON.parse(chess.substring(1, chess.length - 1));
+    var n = tempJSON['n'];
+    for(let i = 0; i < n; i++)
+        for(let j = 0; j < n; j++) {
+            tempJSON['data'][i][j] = JSON.parse(tempJSON['data'][i][j]);
+        }
+    render(tempJSON);
+
+    // undefined
+    // updated when callback
+    // this is an ultra dangerous closure
+    var chessboardJSON = null;
+
+    // IoC & IoD
     reversi.canvas.addEventListener('click', e => {
         let offset = reversi.canvas.getBoundingClientRect();
         let x = Math.floor((e.clientX - offset.left) / reversi.cellWidth);
@@ -32,28 +58,47 @@
         console.log(x, y, 'click position(X, Y)');
         // row, col
         reversi.drawDot(y, x, reversi.R, reversi.positive);
+
+        if(!chessboardJSON) {
+            let temp = '{{ chessboard|safe }}';
+            chessboardJSON = JSON.parse(temp.substring(1, temp.length - 1));
+            let n = chessboardJSON['n'];
+            for(let i = 0; i < n; i++)
+                for(let j = 0; j < n; j++) {
+                    chessboardJSON['data'][i][j] = JSON.parse(chessboardJSON['data'][i][j]);
+                }
+        }
+        chessboardJSON['data'][y][x] = {
+            'state': reversi.positive
+        };
+        const key = reversi.positive + 'Count';
+        chessboardJSON[key] += 1;
+        checkMinMaxCoords(chessboardJSON, y, x);
+        updateFrom(chessboardJSON, y, x);
+        window.setTimeout(function() {
+            render(chessboardJSON);
+        }, 300);
+        console.log('browser', chessboardJSON);
         $.ajax({
             type: 'POST',
             url: "{% url 'index' %}",
             async: true,
             data: {
-                row: y,
-                col: x,
-                player: reversi.positive
+                'player': reversi.positive,
+                'chessboard': JSON.stringify(chessboardJSON)
             },
             success: function f(response) {
+                chessboardJSONStr = response['chessboard'];
+                chessboardJSON = JSON.parse(JSON.parse(chessboardJSONStr));
+                let row = response['row'];
+                let col = response['col'];
+                reversi.drawDot(row, col, reversi.R, playerReverse(reversi.positive));
                 window.setTimeout(function() {
-                    render(response);
-                }, 200);
+                    render(chessboardJSON);
+                }, 300);
+                console.log('server', chessboardJSON);
             }
         });
-        /*
-        if(reversi.positive === 'black') {
-            reversi.positive = 'white';
-        } else {
-            reversi.positive = 'black';
-        }
-        */
     }, false);
 
 </script>
