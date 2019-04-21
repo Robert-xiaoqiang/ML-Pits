@@ -1,3 +1,6 @@
 BWChess/ChessAIWSGI/*
 BWChess/WebVenv/*
 BWChess/db.sqlite3
+CNNClassifier/cifar-10-batches-py/*
+CNNClassifier/model/*
+RNNText/simple-examples/*
