@@ -1,0 +1,14 @@
+{
+    "name": "lines-of-action",
+    "version": "0.0.1",
+    "author": { "name": "WANG Xiaoqiang" },
+    "dependencies": { },
+    "devDependencies": {
+        "babel": "^6.23.0",
+        "babel-cli": "^6.24.1",
+        "babel-core": "^6.24.1",
+        "babel-loader": "^7.0.0",
+        "babel-preset-es2015": "^6.24.1",
+        "webpack": "^2.6.1"
+    }
+}

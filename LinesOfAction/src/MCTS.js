@@ -215,3 +215,5 @@ class MCTS {
         }
     }
 }
+
+export default MCTS;

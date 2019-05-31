@@ -415,3 +415,5 @@ class ChessBoard {
         return 'none'
     }
 }
+
+export default ChessBoard;
