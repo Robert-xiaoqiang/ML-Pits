@@ -139,7 +139,8 @@ class MCTS {
         let player = simulateBegin.state.player;
         let me = this.winner;
         let chessBoard = simulateBegin.state.chessBoard;      
-        while(chessBoard.isTerminal(player) === 'none') {
+        while(chessBoard.isGood() === 'none' &&
+              chessBoard.isTerminal(player) === 'none') {
             player = MCState.playerReverse(player);
             chessBoard = chessBoard.getRandomNextChessBoard(player);
             if(chessBoard.isTerminal(player) !== 'none')
@@ -147,8 +148,11 @@ class MCTS {
             player = MCState.playerReverse(player);
             chessBoard = chessBoard.getRandomNextChessBoard(player);
         }
-        return Number(chessBoard.isTerminal(player) === me);
+        return chessBoard.isGood() !== 'none' ?
+               Number(chessBoard.isGood() === me) :
+               Number(chessBoard.isTerminal(player) === me);
     }
+
     search() {
         if(this.root.state.chessBoard.isTerminal(this.rootPlayer) !== 'none') return;
         let cur = this.root;
@@ -208,7 +212,7 @@ class MCTS {
 
         let datec2 = new Date();
         let c2 = datec2.getTime();
-        while(Number(c2 - c1) <= 1000) {
+        while(Number(c2 - c1) <= 7000) {
             this.search();
             datec2 = new Date();
             c2 = datec2.getTime();
@@ -218,9 +222,9 @@ class MCTS {
         let firstStepIndex = children.reduce((previous, curElement, curIndex, arr) => {
             return curElement.state.visits > arr[previous].state.visits ? curIndex : previous;
         }, 0);
-        // children.forEach((curElement, curIndex, arr) => {
-        //     console.log(curElement.state.visits, curElement.state.scores, curElement.state.uct);
-        // });
+        children.forEach((curElement, curIndex, arr) => {
+            console.log(curElement.state.visits, curElement.state.scores, curElement.state.uct);
+        });
         let chessBoard = children[firstStepIndex].state.chessBoard;
         let firstStep = this.firstStepMap[firstStepIndex];
 

@@ -67,24 +67,25 @@ class LinesOfAction {
     initCanvas () {
         this.canvas.width = this.width;
         this.canvas.height = this.height;
-            // IoC & IoD
+        
+        // IoC & IoD
         this.canvas.addEventListener('click', e => {
             let offset = this.canvas.getBoundingClientRect();
             let x = Math.floor((e.clientX - offset.left) / this.cellWidth);
             let y = Math.floor((e.clientY - offset.top) / this.cellWidth);
 
-            console.log(x, y, 'click position(X, Y)');
+            // console.log(x, y, 'click position(X, Y)');
             if(!this.fromRow && !this.fromCol) {
-                // have no chess
+                // have no chess chosen
                 if(this.chessBoard.data[y][x].state === this.positive) {
+                    this.renderUI();
                     this.fromRow = y;
                     this.fromCol = x;
                     this.allNextStep = this.chessBoard.getAllNextStepAt(y, x);
                     for(let s of this.allNextStep) {
                         let { fromRow, fromCol, toRow, toCol, chessBoard } = s;
                         this.drawNextPosition(toRow, toCol);
-                    }              
-                    return;                    
+                    }                                  
                 }
             } else if(this.fromRow === y && this.fromCol === x){
                 // have chess and the same with before
@@ -104,41 +105,50 @@ class LinesOfAction {
                     for(let s of this.allNextStep) {
                         let { fromRow, fromCol, toRow, toCol, chessBoard } = s;
                         this.drawNextPosition(toRow, toCol);
-                    }
-                    return;    
+                    }   
                 } else if(!this.validateStep(y, x)) {
                     // select 2nd chess error
                     // 1st also validate
                     alert('落子错误');
-                    return;
                 } else {
                     // select 2nd chess successfully
                     // 1st invalidate, at last
-                    this.chessBoard.moveFromTo(this.fromRow, this.fromCol, y, x);
-                    this.renderUI();
+                    window.setTimeout(() => {
+                        this.chessBoard.moveFromTo(this.fromRow, this.fromCol, y, x);
+                        this.renderUI();
+                    }, 1);
 
                     let temp = this.chessBoard.isTerminal(this.positive);
                     if(temp !== 'none') {
-                        this.renderUI();
-                        alert('游戏结束, ' + temp + '胜');
-                        this.chessBoard = new ChessBoard(8);
+                        window.setTimeout(() => {
+                            alert('游戏结束, ' + temp + '胜');
+                            this.chessBoard = new ChessBoard(8);
+                            this.renderUI();
+                        }, 1);
+
+                        // this reture is necessary
+                        // MCTS raise error if terminal
                         return;
                     }
                     
                     console.log('winner:', this.chessBoard.isTerminal(this.positive));
                     this.fromRow = null;
                     this.fromCol = null;
-                    
-                    let mcts = new MCTS(this.chessBoard, this.positive);
-                    let { chessBoard, firstStep } = mcts.generate();
-                    this.chessBoard = chessBoard;
-                    this.renderUI();
+                    window.setTimeout(() => {
+                        let mcts = new MCTS(this.chessBoard, this.positive);
+                        let { chessBoard, firstStep } = mcts.generate();
+                        this.chessBoard = chessBoard;
+                        this.renderUI();
+                        this.drawLastPosition(firstStep.fromRow, firstStep.fromCol);
+                    }, 1);
 
                     temp = this.chessBoard.isTerminal(this.positive);
                     if(temp !== 'none') {
-                        alert('游戏结束, ' + temp + '胜');
-                        this.chessBoard = new ChessBoard(8);
-                        return;
+                        window.setTimeout(() => {
+                            alert('游戏结束, ' + temp + '胜');
+                            this.chessBoard = new ChessBoard(8);
+                            this.renderUI();
+                        }, 1);
                     }
 
                     console.log('after AI winner:', this.chessBoard.isTerminal(this.positive));
@@ -147,11 +157,9 @@ class LinesOfAction {
 
                     console.log('black count:', this.chessBoard.blackCount);
                     console.log('white count:', this.chessBoard.whiteCount);
-                    return;
                 }
-
             }
-            return
+            return;
         }, false);
     }
 
@@ -165,6 +173,7 @@ class LinesOfAction {
 
         // 绘制棋子
         this.drawChesses(this.chessBoard);
+        console.log(this.chessBoard);
         return true;
     }
 
@@ -199,6 +208,7 @@ class LinesOfAction {
             this.ctx.moveTo(0,this.cellWidth*i);
             this.ctx.lineTo(this.cellWidth*this.rowCount,this.cellWidth*i);
         }
+        this.ctx.strokeStyle = 'blue';
         this.ctx.stroke();
 
         // 画纵线
@@ -236,6 +246,16 @@ class LinesOfAction {
         this.ctx.arc(x, y, this.R, 0, 2 * Math.PI);
         this.ctx.closePath();
         this.ctx.strokeStyle = 'green';
+        this.ctx.stroke();
+    }
+
+    drawLastPosition(row, col) {
+        let x = col * this.cellWidth + this.cellWidth / 2;
+        let y = row * this.cellWidth + this.cellWidth / 2;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, this.R, 0, 2 * Math.PI);
+        this.ctx.closePath();
+        this.ctx.strokeStyle = 'red';
         this.ctx.stroke();
     }
 
