@@ -3,7 +3,7 @@ class Cell {
         this.state = state;
     }
     toString() {
-        return String(state);
+        return String(this.state);
     }
     copy() {
         return new Cell(String(this.state));
@@ -48,51 +48,23 @@ class ChessBoard {
             for(let j = 0; j < n; j++)
                 this.data[i][j] = new Cell();
         this.n = n;
-        this.whiteCount = 0;
-        this.blackCount = 0;
+        this.whiteCount = 12;
+        this.blackCount = 12;
         for(let i = 1; i <= 6; i++) {
-            this.setBlackAt(i, 0);
-            this.setBlackAt(i, 7);
+            this.setWhiteAt(i, 0);
+            this.setWhiteAt(i, 7);
 
-            this.setWhiteAt(0, i);
-            this.setWhiteAt(7, i);
+            this.setBlackAt(0, i);
+            this.setBlackAt(7, i);
         }
-        /*
-        this.whites = new Map([
-            [ '0', { row: 1, col: 0 } ],
-            [ '1', { row: 2, col: 0 } ],
-            [ '2', { row: 3, col: 0 } ],
-            [ '3', { row: 4, col: 0 } ],
-            [ '4', { row: 5, col: 0 } ],
-            [ '5', { row: 6, col: 0 } ],
-            [ '6', { row: 1, col: 7 } ],
-            [ '7', { row: 2, col: 7 } ],
-            [ '8', { row: 3, col: 7 } ],
-            [ '9', { row: 4, col: 7 } ],
-            [ '10', { row: 5, col: 7 } ],
-            [ '11', { row: 6, col: 7 } ],
-        ]);
-        this.blacks = new Map([
-            [ '0', { row: 0, col: 1 } ],
-            [ '1', { row: 0, col: 2 } ],
-            [ '2', { row: 0, col: 3 } ],
-            [ '3', { row: 0, col: 4 } ],
-            [ '4', { row: 0, col: 5 } ],
-            [ '5', { row: 0, col: 6 } ],
-            [ '6', { row: 7, col: 1 } ],
-            [ '7', { row: 7, col: 2 } ],
-            [ '8', { row: 7, col: 3 } ],
-            [ '9', { row: 7, col: 4 } ],
-            [ '11', { row: 7, col: 5 } ],
-            [ '12', { row: 7, col: 6 } ],
-        ]);
-        */
+        //console.log('black CC:', this.getCC('black'));
+        //console.log('white CC:', this.getCC('white'));
     }
 
     copy() {
-        const ret = ChessBoard(this.n)
-        for(let i = 0; i < n; i++)
-            for(let j = 0; j < n; j++)
+        const ret = new ChessBoard(this.n)
+        for(let i = 0; i < this.n; i++)
+            for(let j = 0; j < this.n; j++)
                 ret.data[i][j].setState(this.data[i][j].state);
         ret.n = Number(this.n);
         ret.blackCount = Number(this.blackCount);
@@ -102,24 +74,24 @@ class ChessBoard {
 
     setBlackAt(row, col) {        
         if(this.data[row][col].isWhite()) {
-            this.blackCount++;
+            ;
             this.whiteCount--;
         } else if(this.data[row][col].isNone()) {
-            this.blackCount++;
+            this.blackCount;
         } else {
-            throw new Exception('ChessBoard::setBlackAt() Exception');
+            throw new Error('ChessBoard::setBlackAt() Exception');
         }
         this.data[row][col].setBlack();
     }
 
     setWhiteAt(row, col) {
         if(this.data[row][col].isBlack()) {
-            this.whiteCount++;
+            ;
             this.blackCount--;
         } else if(this.data[row][col].isNone()) {
-            this.whiteCount++;
+            this.whiteCount;
         } else {
-            throw new Exception('ChessBoard::setWhiteAt() Exception');
+            throw new Error('ChessBoard::setWhiteAt() Exception');
         }
         this.data[row][col].setWhite();
     }
@@ -137,7 +109,7 @@ class ChessBoard {
     }
 
     moveFromTo(fromRow, fromCol, toRow, toCol) {
-        this.setAt(toRow, toCol, this.data[fromRow][fromCol]);
+        this.setAt(toRow, toCol, this.data[fromRow][fromCol].state);
         this.resetAt(fromRow, fromCol);
     }
 
@@ -211,8 +183,8 @@ class ChessBoard {
             return {
                 fromRow: fromRow,
                 fromCol: fromCol,
-                toRow: toRow,
-                toCol: toCol,
+                toRow: row,
+                toCol: col,
                 chessBoard: ret
             };
         } else {
@@ -283,8 +255,13 @@ class ChessBoard {
     // isTerminal() should check before here
     // or maybe undefined
     getRandomNextChessBoard(player) {
-        ans = this.getAllNextStep(player);
-        return ans[Math.floor(Math.random() * ans.length)];
+        let ans = this.getAllNextStep(player);
+        let { fromRow,
+        fromCol,
+        toRow,
+        toCol,
+        chessBoard } = ans[Math.floor(Math.random() * ans.length)];
+        return chessBoard;
     }
     /**
      * 
@@ -295,9 +272,10 @@ class ChessBoard {
      * 
      * @return 0/1
      */
-    BFSHelper(queue, visit, row, col) {
+    BFSHelper(queue, visit, row, col, player) {
         if(row >= 0 && row < this.n &&
            col >= 0 && col < this.n &&
+           this.data[row][col].state === player &&
            !visit[row][col]) {
             visit[row][col] = true;
             queue.push({ row: row, col: col });
@@ -313,36 +291,35 @@ class ChessBoard {
      * 
      * @return return sizeof(some connect component)
      */
-    BFS(row, col) {
+    BFS(prow, pcol, visit) {
+        let player = this.data[prow][pcol].state;
         let ret = 0;
         let queue = [];
-        let visit = new Array(this.n);
-        for(let i = 0; i < this.n; i++) {
-            visit[i] = new Array(this.n);
-            visit[i].fill(false, 0, this.end);
-        }
-        queue.push({ row: row, col: col });
-        visit[row][col] = true;
+        queue.push({ row: prow, col: pcol });
+        visit[prow][pcol] = true;
         ret++;
         while(queue.length) {
             const top = queue.shift();
-            let { topRow, topCol } = top;
+            let { row, col } = top;
+            let topRow = row;
+            let topCol = col;
+
             // up
-            ret += this.BFSHelper(queue, visit, topRow - 1, topCol);
+            ret += this.BFSHelper(queue, visit, topRow - 1, topCol, player);
             // down
-            ret += this.BFSHelper(queue, visit, topRow + 1, topCol);
+            ret += this.BFSHelper(queue, visit, topRow + 1, topCol, player);
             // left
-            ret += this.BFSHelper(queue, visit, topRow, topCol - 1);
+            ret += this.BFSHelper(queue, visit, topRow, topCol - 1, player);
             // right
-            ret += this.BFSHelper(queue, visit, topRow, topCol + 1);
+            ret += this.BFSHelper(queue, visit, topRow, topCol + 1, player);
             // left-top
-            ret += this.BFSHelper(queue, visit, topRow - 1, topCol - 1);
+            ret += this.BFSHelper(queue, visit, topRow - 1, topCol - 1, player);
             // right-bottom
-            ret += this.BFSHelper(queue, visit, topRow + 1, topCol + 1);
+            ret += this.BFSHelper(queue, visit, topRow + 1, topCol + 1, player);
             // right-top
-            ret += this.BFSHelper(queue, visit, topRow - 1, topCol + 1);
+            ret += this.BFSHelper(queue, visit, topRow - 1, topCol + 1, player);
             // left-bottom
-            ret += this.BFSHelper(queue, visit, topRow + 1, topCol - 1);
+            ret += this.BFSHelper(queue, visit, topRow + 1, topCol - 1, player);
         }
         return ret;
     }
@@ -354,6 +331,11 @@ class ChessBoard {
      */
     isConnect(player) {
         let ret = false;
+        let visit = new Array(this.n);
+        for(let i = 0; i < this.n; i++) {
+            visit[i] = new Array(this.n);
+            visit[i].fill(false, 0, this.end);
+        }
         if(player !== 'none') {
             let count = 0;
             if(player === 'black') count = this.blackCount;
@@ -363,15 +345,45 @@ class ChessBoard {
                 for(let j = 0; j < this.n; j++) {
                     if(this.data[i][j].toString() === player) {
                         // someone connect component(CC)
-                        ret = this.BFS(i, j) === count;
+                        ret = this.BFS(i, j, visit) === count;
+                        // console.log('BFS: ', this.BFS(i, j, visit), 'count: ', count);
                         break;
                     }
                 }
+                if(ret) break;
             }
         }
         return ret;
     }
-
+    getCC(player) {
+        let ret = 0;
+        let nc = 0;
+        let count = 0;
+        if(player === 'black') count = this.blackCount;
+        else count = this.whiteCount;
+        let visit = new Array(this.n);
+        for(let i = 0; i < this.n; i++) {
+            visit[i] = new Array(this.n);
+            visit[i].fill(false, 0, this.end);
+        }
+        for(let i = 0; i < this.n; i++) {
+            for(let j = 0; j < this.n; j++) {
+                if(this.data[i][j].toString() === player && !visit[i][j]) {
+                    nc += this.BFS(i, j, visit);
+                    ret += 1;
+                    if(nc == count) {
+                        break;
+                    } else if(nc > count) {
+                        console.log('connect error');
+                    }
+                }
+            }
+            if(nc == count) {
+                break;
+            }
+        }
+        return ret;
+    }
     /**
      * @param lastStepPlayer for checking deadlock
      * 
@@ -382,14 +394,17 @@ class ChessBoard {
      */
     isTerminal(lastStepPlayer) {
         let ret = 'none';
-        bl = this.getAllNextStep('black').length;
-        wl = this.getAllNextStep('white').length;
+        let bl = this.getAllNextStep('black').length;
+        let wl = this.getAllNextStep('white').length;
+
         if(this.isConnect('black')) {
             ret = 'black';
         } else if(this.isConnect('white')) {
             ret = 'white';
-        } else if(this.getAllNextStep('black').length === 0){
-            ret = 'white'
+        } else if(!this.whiteCount) {
+            ret = 'black';
+        } else if(!this.blackCount) {
+            ret = 'white';
         } else if(bl === 0) {
             if(wl > 0) {
                 ret = 'white';
@@ -416,4 +431,4 @@ class ChessBoard {
     }
 }
 
-export default ChessBoard;
+// export default ChessBoard;

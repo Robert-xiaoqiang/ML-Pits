@@ -1,5 +1,5 @@
-import ChessBoard from 'ChessBoard';
-import MCTS from 'MCTS';
+import ChessBoard from './ChessBoard';
+import MCTS from './MCTS';
 
 function playerReverse(player) {
     if(player === 'black') {
@@ -57,8 +57,8 @@ class LinesOfAction {
             // IoC & IoD
         this.canvas.addEventListener('click', e => {
             let offset = this.canvas.getBoundingClientRect();
-            let x = Math.floor((e.clientX - offset.left) / reversi.cellWidth);
-            let y = Math.floor((e.clientY - offset.top) / reversi.cellWidth);
+            let x = Math.floor((e.clientX - offset.left) / this.cellWidth);
+            let y = Math.floor((e.clientY - offset.top) / this.cellWidth);
 
             console.log(x, y, 'click position(X, Y)');
             if(!this.fromRow && !this.fromCol) {
@@ -69,12 +69,13 @@ class LinesOfAction {
                 this.fromRow = null;
                 this.fromCol = null;
                 this.chessBoard.moveFromTo(this.fromRow, this.fromCol, y, x);
+                console.log(this.chessBoard.data);
                 this.renderUI();
             }
-            let mcts = new MCTS(this.chessBoard, this.positive);
+            //let mcts = new MCTS(this.chessBoard, this.positive);
             this.positive = playerReverse(this.positive);
-            let { chessBoard, firstStep } = mcts.generate();
-            this.chessBoard = chessBoard;
+            //let { chessBoard, firstStep } = mcts.generate();
+            //this.chessBoard = chessBoard;
             this.renderUI();
         }, false);
     }
@@ -151,3 +152,6 @@ class LinesOfAction {
         }
     }
 }
+
+// is this global?
+var loa = new LinesOfAction('blackWhite');
