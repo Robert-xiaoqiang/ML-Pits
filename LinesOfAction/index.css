@@ -22,3 +22,14 @@ button{
 div{
     text-align: center;
 }
+
+.left {
+    float: left;
+    width: 300px;
+    height: 300px;    
+}
+
+.right {
+    margin-left: 310px;
+    height: 300px;
+}

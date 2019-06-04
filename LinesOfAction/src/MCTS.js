@@ -148,9 +148,9 @@ class MCTS {
             player = MCState.playerReverse(player);
             chessBoard = chessBoard.getRandomNextChessBoard(player);
         }
-        return chessBoard.isGood() !== 'none' ?
-               Number(chessBoard.isGood() === me) :
-               Number(chessBoard.isTerminal(player) === me);
+        return chessBoard.isTerminal(player) !== 'none' ?
+               Number(chessBoard.isTerminal(player) === me) :
+               Number(chessBoard.isGood() === me);
     }
 
     search() {
@@ -212,7 +212,7 @@ class MCTS {
 
         let datec2 = new Date();
         let c2 = datec2.getTime();
-        while(Number(c2 - c1) <= 7000) {
+        while(Number(c2 - c1) <= 45000) {
             this.search();
             datec2 = new Date();
             c2 = datec2.getTime();
@@ -230,7 +230,8 @@ class MCTS {
 
         return {
             chessBoard: chessBoard,
-            firstStep: firstStep
+            firstStep: firstStep,
+            duration: c2 - c1
         }
     }
 }

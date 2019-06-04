@@ -427,13 +427,13 @@ class ChessBoard {
      * 'black', 'white', 'none'
      */
     isGood() {
-        let wcc = this.getCC('white');
-        let bcc = this.getCC('black');
-        if(wcc >= bcc + 4) {
-            return 'black';
-        } else if(bcc >= wcc + 4) {
-            return 'white';
-        }
+        // let wcc = this.getCC('white');
+        // let bcc = this.getCC('black');
+        // if(wcc >= bcc + 4) {
+        //     return 'black';
+        // } else if(bcc >= wcc + 4) {
+        //     return 'white';
+        // }
         // if(this.blackCount >= this.whiteCount + 6) {
         //     return 'black';
         // } else if(this.whiteCount >= this.blackCount + 6) {
