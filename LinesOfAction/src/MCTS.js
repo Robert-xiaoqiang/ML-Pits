@@ -76,7 +76,8 @@ class MCTNode {
     getUCT() {
         if(this.parent !== null && this.state.visits > 0) {
             let t = this.parent.state.visits;
-            return this.state.scores / this.state.visits + MCTSConstant * Math.sqrt(Math.log(t) / this.state.visits);
+            return this.state.scores / this.state.visits +
+                   MCTSConstant * Math.sqrt(Math.log(t) / this.state.visits);
         } else {
             throw new Exception('MCTNode::getUCT() Exception');
         }
@@ -212,7 +213,7 @@ class MCTS {
 
         let datec2 = new Date();
         let c2 = datec2.getTime();
-        while(Number(c2 - c1) <= 45000) {
+        while(Number(c2 - c1) <= 120000) {
             this.search();
             datec2 = new Date();
             c2 = datec2.getTime();

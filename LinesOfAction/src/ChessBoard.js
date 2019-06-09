@@ -397,13 +397,13 @@ class ChessBoard {
         let bl = this.getAllNextStep('black').length;
         let wl = this.getAllNextStep('white').length;
 
-        if(this.isConnect('black')) {
+        if(this.whiteCount === 1) {
+            ret = 'black';
+        } else if(this.blackCount === 1) {
+            ret = 'white';
+        } else if(this.isConnect('black')) {
             ret = 'black';
         } else if(this.isConnect('white')) {
-            ret = 'white';
-        } else if(!this.whiteCount) {
-            ret = 'black';
-        } else if(!this.blackCount) {
             ret = 'white';
         } else if(bl === 0) {
             if(wl > 0) {
