@@ -443,4 +443,4 @@ class ChessBoard {
     }
 }
 
-// export default ChessBoard;
+export default ChessBoard;
