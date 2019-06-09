@@ -1,4 +1,5 @@
 import ChessBoard from './ChessBoard';
+import MCTS from './MCTS';
 function playerReverse(player) {
     if(player === 'black') {
         return 'white';
@@ -258,3 +259,5 @@ class LinesOfAction {
         return ret;
     }
 }
+
+var loa = new LinesOfAction('blackWhite');
