@@ -213,7 +213,7 @@ class MCTS {
 
         let datec2 = new Date();
         let c2 = datec2.getTime();
-        while(Number(c2 - c1) <= 120000) {
+        while(Number(c2 - c1) <= 55000) {
             this.search();
             datec2 = new Date();
             c2 = datec2.getTime();
